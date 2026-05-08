@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rogo — CIM Analyzer & Deal Screener</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#04070a;
+  --s1:#070d12;
+  --s2:#0a1219;
+  --s3:#0d1820;
+  --border:rgba(255,255,255,0.055);
+  --border-hi:rgba(255,255,255,0.11);
+  --text:#b8cad8;
+  --text-hi:#ddeaf5;
+  --text-lo:#4a6070;
+  --dim:#607888;
+  --accent:#1d6fa4;
+  --accent-hi:#2d9fd8;
+  --accent-glow:rgba(45,159,216,0.15);
+  --green:#1a7a52;
+  --green-hi:#22c47d;
+  --green-dim:rgba(34,196,125,0.1);
+  --amber:#7a5a1a;
+  --amber-hi:#f0b429;
+  --amber-dim:rgba(240,180,41,0.1);
+  --red:#7a1a1a;
+  --red-hi:#e05252;
+  --red-dim:rgba(224,82,82,0.1);
+  --purple:#3d1f7a;
+  --purple-hi:#9b72f0;
+  --purple-dim:rgba(155,114,240,0.1);
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans)}
+
+/* ── SYSBAR ── */
+.sysbar{
+  background:#020508;
+  border-bottom:0.5px solid var(--border);
+  padding:4px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--mono);font-size:9.5px;color:var(--text-lo);
+  letter-spacing:0.5px;
+}
+.sys-left{display:flex;align-items:center;gap:20px}
+.sys-live{display:flex;align-items:center;gap:5px}
+.sys-dot{width:5px;height:5px;border-radius:50%;background:var(--green-hi);box-shadow:0 0 5px var(--green-hi);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+
+/* ── HEADER ── */
+.header{
+  background:var(--s1);
+  border-bottom:1px solid var(--border-hi);
+  padding:0 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:46px;
+  position:sticky;top:0;z-index:100;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{
+  width:28px;height:28px;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent-hi) 100%);
+  border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:13px;font-weight:600;color:#fff;
+}
+.brand-name{font-weight:600;font-size:14px;color:var(--text-hi);letter-spacing:-0.3px}
+.brand-sep{color:var(--text-lo);margin:0 6px;font-size:13px}
+.brand-mod{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.header-right{display:flex;align-items:center;gap:10px}
+.hbadge{
+  font-family:var(--mono);font-size:9px;padding:3px 8px;
+  border-radius:2px;letter-spacing:1px;font-weight:500;
+}
+.hbadge-live{background:var(--green-dim);color:var(--green-hi);border:0.5px solid rgba(34,196,125,0.25)}
+.hbadge-model{background:var(--accent-glow);color:var(--accent-hi);border:0.5px solid rgba(45,159,216,0.25)}
+.status-pill{
+  font-family:var(--mono);font-size:9.5px;
+  padding:3px 10px;border-radius:2px;border:0.5px solid;
+  display:flex;align-items:center;gap:5px;letter-spacing:0.5px;
+}
+.pill-idle{background:rgba(30,50,70,0.5);color:var(--dim);border-color:var(--border-hi)}
+.pill-run{background:var(--amber-dim);color:var(--amber-hi);border-color:rgba(240,180,41,0.25)}
+.pill-done{background:var(--green-dim);color:var(--green-hi);border-color:rgba(34,196,125,0.25)}
+.pill-err{background:var(--red-dim);color:var(--red-hi);border-color:rgba(224,82,82,0.25)}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 55px)}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  background:var(--s1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:sticky;top:46px;height:calc(100vh - 46px);overflow-y:auto;
+}
+.sb-section{padding:14px;border-bottom:0.5px solid var(--border)}
+.sb-label{
+  font-family:var(--mono);font-size:9px;color:var(--text-lo);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;
+}
+
+/* CIM selector */
+.cim-btn{
+  width:100%;padding:9px 10px;border-radius:3px;
+  border:0.5px solid transparent;
+  background:transparent;color:var(--dim);
+  font-family:var(--sans);font-size:11.5px;
+  cursor:pointer;text-align:left;transition:all 0.1s;
+  line-height:1.4;margin-bottom:3px;display:block;
+}
+.cim-btn:hover{background:var(--s2);border-color:var(--border);color:var(--text)}
+.cim-btn.active{background:var(--accent-glow);border-color:rgba(45,159,216,0.3);color:var(--accent-hi)}
+.cim-sub{font-size:9.5px;font-family:var(--mono);color:var(--text-lo);margin-top:2px}
+
+/* doc preview */
+.doc-prev{
+  background:var(--bg);border:0.5px solid var(--border);border-radius:2px;
+  padding:10px;font-family:var(--mono);font-size:9px;
+  color:var(--dim);line-height:1.7;max-height:140px;overflow-y:auto;
+  white-space:pre-wrap;
+}
+
+/* progress */
+.progress-wrap{height:1px;background:var(--border);overflow:hidden;display:none}
+.progress-fill{height:100%;background:var(--accent-hi);transition:width 0.35s ease}
+.step-msg{font-family:var(--mono);font-size:9.5px;color:var(--amber-hi);min-height:13px;padding:3px 0}
+
+/* run btn */
+.run-btn{
+  width:100%;padding:11px;
+  background:var(--accent);color:#fff;border:none;border-radius:3px;
+  font-family:var(--mono);font-size:11px;font-weight:500;
+  cursor:pointer;transition:background 0.12s;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  letter-spacing:1px;text-transform:uppercase;
+}
+.run-btn:hover:not(:disabled){background:var(--accent-hi)}
+.run-btn:disabled{opacity:0.3;cursor:not-allowed}
+.spin{
+  width:12px;height:12px;
+  border:1.5px solid rgba(255,255,255,0.25);border-top-color:#fff;
+  border-radius:50%;animation:spin 0.5s linear infinite;display:none;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MAIN ── */
+.main{padding:18px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+
+/* pipeline */
+.pipeline{display:flex;align-items:stretch;gap:0;margin-bottom:2px}
+.pipe-step{
+  flex:1;padding:8px 10px;text-align:center;
+  background:var(--s2);border:0.5px solid var(--border);
+  font-family:var(--mono);font-size:10px;color:var(--text-lo);
+  transition:all 0.2s;line-height:1.3;
+}
+.pipe-step:first-child{border-radius:3px 0 0 3px}
+.pipe-step:last-child{border-radius:0 3px 3px 0}
+.pipe-step.active{color:var(--amber-hi);border-color:rgba(240,180,41,0.3);background:var(--amber-dim)}
+.pipe-step.done{color:var(--green-hi);border-color:rgba(34,196,125,0.25);background:var(--green-dim)}
+.pipe-step-sub{font-size:8px;color:var(--text-lo);margin-top:2px;opacity:0.7}
+.pipe-arrow{width:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--text-lo);font-size:8px;background:var(--s2);border-top:0.5px solid var(--border);border-bottom:0.5px solid var(--border)}
+
+/* run meta bar */
+.run-meta-bar{
+  display:flex;align-items:center;gap:0;
+  background:var(--s2);border:0.5px solid var(--border);border-radius:3px;
+  overflow:hidden;font-family:var(--mono);font-size:10px;
+}
+.rmi{
+  padding:8px 14px;border-right:0.5px solid var(--border);
+  color:var(--text-lo);
+}
+.rmi:last-child{border-right:none;margin-left:auto}
+.rmi span{color:var(--dim);margin-left:4px}
+
+/* panels */
+.panel{background:var(--s1);border:0.5px solid var(--border);border-radius:3px;overflow:hidden}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 14px;border-bottom:0.5px solid var(--border);
+  background:var(--s2);
+}
+.ph-left{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+.ph-right{font-family:var(--mono);font-size:9.5px;color:var(--text-lo)}
+.ptag{font-size:9px;padding:2px 6px;border-radius:2px;font-family:var(--mono);letter-spacing:0.5px;font-weight:500}
+.ptag-ai{background:var(--purple-dim);color:var(--purple-hi);border:0.5px solid rgba(155,114,240,0.25)}
+.ptag-data{background:var(--accent-glow);color:var(--accent-hi);border:0.5px solid rgba(45,159,216,0.25)}
+.ptag-memo{background:var(--green-dim);color:var(--green-hi);border:0.5px solid rgba(34,196,125,0.25)}
+.ptag-risk{background:var(--red-dim);color:var(--red-hi);border:0.5px solid rgba(224,82,82,0.25)}
+.ptag-comps{background:var(--amber-dim);color:var(--amber-hi);border:0.5px solid rgba(240,180,41,0.25)}
+.ptag-src{background:rgba(30,50,70,0.6);color:var(--dim);border:0.5px solid var(--border-hi)}
+.panel-body{padding:14px}
+
+/* snapshot grid */
+.snap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.snap-card{background:var(--s2);border:0.5px solid var(--border);border-radius:3px;padding:10px 12px}
+.snap-label{font-family:var(--mono);font-size:9px;color:var(--text-lo);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
+.snap-val{font-family:var(--mono);font-size:13px;color:var(--text-hi);font-weight:500;line-height:1.3}
+.snap-sub{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:3px}
+
+/* financial table */
+.fin-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+.fin-table th{
+  text-align:left;padding:6px 10px;
+  font-size:9px;color:var(--text-lo);letter-spacing:1px;text-transform:uppercase;
+  border-bottom:0.5px solid var(--border);font-weight:400;
+}
+.fin-table td{
+  padding:7px 10px;border-bottom:0.5px solid var(--border);
+  color:var(--text);vertical-align:top;line-height:1.4;
+}
+.fin-table tr:last-child td{border-bottom:none}
+.fin-table td:first-child{color:var(--dim);width:180px}
+.fin-table td.num{color:var(--accent-hi);text-align:right}
+.fin-table td.pos{color:var(--green-hi)}
+.fin-table td.neg{color:var(--red-hi)}
+.fin-table td.src{
+  font-size:9px;color:var(--text-lo);
+  border-left:1px solid var(--accent);padding-left:8px;
+}
+
+/* comps table */
+.comps-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px}
+.comps-table th{
+  text-align:right;padding:6px 10px;
+  font-size:9px;color:var(--text-lo);letter-spacing:1px;text-transform:uppercase;
+  border-bottom:0.5px solid var(--border);font-weight:400;
+}
+.comps-table th:first-child,.comps-table th:nth-child(2){text-align:left}
+.comps-table td{
+  padding:7px 10px;border-bottom:0.5px solid var(--border);
+  text-align:right;color:var(--text);
+}
+.comps-table td:first-child{text-align:left;color:var(--text-hi);font-weight:500}
+.comps-table td:nth-child(2){text-align:left;color:var(--dim);font-size:9.5px}
+.comps-table tr:last-child td{border-bottom:none}
+.comps-table tr.highlight td{background:var(--accent-glow)}
+.comps-table tr.highlight td:first-child{color:var(--accent-hi)}
+
+/* memo sections */
+.memo-section{margin-bottom:14px;padding-bottom:14px;border-bottom:0.5px solid var(--border)}
+.memo-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.memo-heading{
+  font-family:var(--mono);font-size:10px;color:var(--accent-hi);
+  letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;
+}
+.memo-heading::after{content:'';flex:1;height:0.5px;background:var(--border)}
+.memo-body{font-size:12px;line-height:1.7;color:var(--text);font-family:var(--sans)}
+.memo-bullets{list-style:none;padding:0;margin-top:6px}
+.memo-bullets li{
+  display:flex;align-items:flex-start;gap:8px;
+  font-size:11.5px;padding:4px 0;color:var(--text);
+  border-bottom:0.5px solid var(--border);line-height:1.5;
+}
+.memo-bullets li:last-child{border-bottom:none}
+.bullet-mark{
+  width:16px;height:16px;border-radius:2px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-family:var(--mono);margin-top:1px;
+}
+.bm-pos{background:var(--green-dim);color:var(--green-hi)}
+.bm-neg{background:var(--red-dim);color:var(--red-hi)}
+.bm-neu{background:var(--accent-glow);color:var(--accent-hi)}
+
+/* risk matrix */
+.risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.risk-card{
+  background:var(--s2);border:0.5px solid var(--border);border-radius:3px;padding:10px 12px;
+}
+.risk-card.high{border-color:rgba(224,82,82,0.25)}
+.risk-card.med{border-color:rgba(240,180,41,0.25)}
+.risk-card.low{border-color:rgba(34,196,125,0.25)}
+.risk-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.risk-name{font-family:var(--mono);font-size:10.5px;color:var(--text-hi);font-weight:500}
+.risk-level{font-family:var(--mono);font-size:8.5px;padding:1px 6px;border-radius:2px}
+.rl-high{background:var(--red-dim);color:var(--red-hi)}
+.rl-med{background:var(--amber-dim);color:var(--amber-hi)}
+.rl-low{background:var(--green-dim);color:var(--green-hi)}
+.risk-desc{font-size:11px;color:var(--dim);line-height:1.5}
+
+/* source citations */
+.src-list{display:flex;flex-direction:column;gap:6px}
+.src-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:8px 10px;background:var(--s2);border:0.5px solid var(--border);
+  border-radius:3px;font-size:11px;
+}
+.src-num{
+  width:18px;height:18px;border-radius:2px;flex-shrink:0;
+  background:var(--accent-glow);color:var(--accent-hi);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:9px;font-weight:600;
+}
+.src-body{flex:1}
+.src-claim{color:var(--text);margin-bottom:3px;line-height:1.4}
+.src-loc{font-family:var(--mono);font-size:9px;color:var(--dim)}
+
+/* verdict */
+.verdict{
+  display:flex;align-items:stretch;border:0.5px solid var(--border);
+  border-radius:3px;overflow:hidden;
+}
+.verdict-status{
+  padding:14px 18px;min-width:180px;
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:12px;font-weight:600;
+}
+.vs-pass{background:var(--green-dim);color:var(--green-hi);border-right:0.5px solid rgba(34,196,125,0.2)}
+.vs-watch{background:var(--amber-dim);color:var(--amber-hi);border-right:0.5px solid rgba(240,180,41,0.2)}
+.vs-pass{background:var(--green-dim);color:var(--green-hi);border-right:0.5px solid rgba(34,196,125,0.2)}
+.verdict-body{flex:1;padding:12px 16px;background:var(--s2)}
+.verdict-summary{font-size:12px;color:var(--text);margin-bottom:6px;line-height:1.5}
+.verdict-metas{display:flex;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:9.5px;color:var(--text-lo)}
+.verdict-metas span{color:var(--dim);margin-left:3px}
+
+/* audit */
+.audit-log{font-family:var(--mono);font-size:10px;line-height:1.9;color:var(--text-lo)}
+.al{display:flex;gap:12px;border-bottom:0.5px solid rgba(255,255,255,0.03);padding:1px 0}
+.al:last-child{border-bottom:none}
+.al-ts{flex-shrink:0;min-width:62px;color:var(--text-lo)}
+.al-lv{width:56px;flex-shrink:0;font-weight:500}
+.al-msg{flex:1}
+.al-init .al-lv{color:var(--purple-hi)}.al-init .al-msg{color:var(--purple-hi)}
+.al-pass .al-lv{color:var(--green-hi)}.al-pass .al-msg{color:var(--dim)}
+.al-fail .al-lv{color:var(--red-hi)}.al-fail .al-msg{color:var(--red-hi)}
+.al-warn .al-lv{color:var(--amber-hi)}.al-warn .al-msg{color:var(--amber-hi)}
+.al-info .al-lv{color:var(--accent-hi)}.al-info .al-msg{color:var(--dim)}
+
+/* empty */
+.empty{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;height:380px;gap:16px;
+}
+.empty-grid{display:grid;grid-template-columns:repeat(5,44px);gap:4px;opacity:0.12}
+.empty-cell{height:20px;border:0.5px solid var(--border-hi);border-radius:2px}
+.empty-txt{font-family:var(--mono);font-size:11px;color:var(--text-lo);text-align:center;line-height:1.9}
+
+/* error */
+.err-box{
+  background:var(--red-dim);border:0.5px solid rgba(224,82,82,0.3);
+  border-radius:3px;padding:14px;font-family:var(--mono);
+  font-size:11px;color:var(--red-hi);line-height:1.6;
+}
+
+.footer{
+  padding:8px 18px;border-top:0.5px solid var(--border);
+  background:var(--s1);font-family:var(--mono);font-size:9.5px;
+  color:var(--text-lo);display:flex;justify-content:space-between;
+}
+</style>
+</head>
+<body>
+
+<div class="sysbar">
+  <div class="sys-left">
+    <div class="sys-live"><div class="sys-dot"></div>SYSTEMS OPERATIONAL</div>
+    <span>ENV: PRODUCTION</span>
+    <span>REGION: US-EAST-1</span>
+    <span>ENGINE: ROGO-DEAL-SCREENER v1.0</span>
+  </div>
+  <div><span id="sysclock"></span> UTC</div>
+</div>
+
+<div class="header">
+  <div class="brand">
+    <div class="brand-mark">R</div>
+    <span class="brand-name">Rogo</span>
+    <span class="brand-sep">/</span>
+    <span class="brand-mod">CIM Analyzer & Deal Screener</span>
+  </div>
+  <div class="header-right">
+    <span class="hbadge hbadge-live">LIVE</span>
+    <span class="hbadge hbadge-model">claude-sonnet-4-5</span>
+    <span class="status-pill pill-idle" id="status-pill">● IDLE</span>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+
+    <div class="sb-section">
+      <div class="sb-label">CIM / Deal Document</div>
+      <button class="cim-btn active" onclick="selectCIM('saas',this)">
+        Verint Systems (VRNT)
+        <div class="cim-sub">Enterprise AI SaaS · $910M Revenue · Take-private</div>
+      </button>
+      <button class="cim-btn" onclick="selectCIM('industrial',this)">
+        Howmet Precision Structures
+        <div class="cim-sub">Aerospace · $1.24B Revenue · Carve-out</div>
+      </button>
+      <button class="cim-btn" onclick="selectCIM('healthcare',this)">
+        Waystar (WAY)
+        <div class="cim-sub">Healthcare IT · $917M Revenue · Secondary block</div>
+      </button>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Document Preview</div>
+      <div class="doc-prev" id="doc-prev"></div>
+    </div>
+
+    <div class="sb-section" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:6px">
+      <div class="progress-wrap" id="pw"><div class="progress-fill" id="pf" style="width:0%"></div></div>
+      <div class="step-msg" id="stepmsg"></div>
+      <button class="run-btn" id="run-btn" onclick="runScreener()">
+        <div class="spin" id="spin"></div>
+        <span id="btn-txt">Screen Deal</span>
+      </button>
+    </div>
+
+  </div>
+
+  <div class="main" id="main">
+    <div class="empty">
+      <div class="empty-grid">${Array(15).fill('<div class="empty-cell"></div>').join('')}</div>
+      <div class="empty-txt">
+        Select a CIM and screen the deal<br>
+        <span style="font-size:9px;color:var(--text-lo)">AI extraction + comp analysis + investment memo + risk matrix + source citations</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>Rogo CIM Analyzer & Deal Screener - Built by Rahul Garg</span>
+  <span>All outputs are AI-generated and require analyst review before distribution</span>
+</div>
+
+<script>
+// Key
+const AK = atob('c2stYW50LWFwaTAzLVE0VkM5RnJ4RllBSkc4dUMyOG04b2t0bkFFNnpyQnZHUWYyTTVxeTJuRkczREYzUzNfR013Q2xCNm5xbVhuX0t6ZExqWm54QldGeVBDbFBlNGlZaE1BLVdkUk5JQUFB');
+
+// Clock
+setInterval(()=>{
+  const el=document.getElementById('sysclock');
+  if(el) el.textContent=new Date().toISOString().slice(0,19).replace('T',' ');
+},1000);
+
+// CIM documents
+const cims = {
+  saas: `CONFIDENTIAL INFORMATION MEMORANDUM
+Verint Systems, Inc. — Project Beacon
+Prepared by: Goldman Sachs & Co. | October 2024
+PROCESS: Select-party process. Management presentations scheduled for November 2024.
+
+EXECUTIVE SUMMARY
+Verint Systems (NASDAQ: VRNT) is a global leader in AI-powered customer engagement software, serving over 10,000 organizations across 175 countries. The company is evaluating a take-private transaction following a period of sustained multiple compression. Verint's Boundless AI platform automates customer service workflows across voice, digital, and back-office channels for Fortune 500 financial services, telecom, and healthcare clients.
+
+BUSINESS OVERVIEW
+Verint's platform enables enterprises to automate contact center operations using AI bots, workforce management, and quality monitoring tools. The company processes over 1 billion interactions annually and integrates with Salesforce, ServiceNow, Microsoft Teams, and 400+ enterprise systems. Over 85% of revenue is recurring (SaaS + maintenance). The company completed its cloud transition in FY2024, with cloud revenue now comprising 65% of total ARR.
+
+FINANCIAL HIGHLIGHTS (FY2024, Year Ended January 31, 2024)
+- Total Revenue: $910M (flat YoY; cloud revenue growing 12% YoY, offsetting legacy maintenance decline)
+- Cloud ARR: $620M (up from $540M in FY2023, +15% YoY)
+- Gross Margin: 70% (SaaS gross margin 76%)
+- Adjusted EBITDA: $185M (20% margin)
+- Free Cash Flow: $165M (18% FCF margin)
+- Net Debt: $370M (2.0x Net Leverage on Adj. EBITDA)
+- R&D Investment: $180M (20% of revenue)
+
+CUSTOMER METRICS
+- 10,000+ enterprise customers globally
+- Top 10 customers represent 12% of revenue (low concentration)
+- NRR: 108% (cloud cohort); 95% blended (including legacy maintenance)
+- Average contract length: 3 years
+- Fortune 100 penetration: 85 of 100
+
+STRATEGIC RATIONALE FOR TAKE-PRIVATE
+- Public market multiple (6x EV/EBITDA) materially below private market value
+- Cloud transition creating near-term revenue drag that public markets penalize
+- R&D investment cycle requires multi-year runway best suited to private ownership
+- AI product cycle (Verint Da Vinci AI) expected to drive re-acceleration in FY2026
+
+MANAGEMENT TEAM
+- CEO: Dan Bodner (co-founder, 30+ years, owns 5% of company)
+- CFO: Grant Highlander (ex-Goldman Sachs, joined 2019)
+- CPO: Heather Richards (ex-Salesforce, built AI product suite)
+
+TRANSACTION
+Goldman Sachs running select-party process targeting PE sponsors. Management rolling 10-15% of proceeds. Expected close Q1 2025. Board has received preliminary expressions of interest at 8-10x EV/EBITDA.`,
+
+  industrial: `CONFIDENTIAL INFORMATION MEMORANDUM
+Howmet Aerospace Precision Structures — Project Falcon (Carve-out)
+Prepared by: Evercore Partners | September 2024
+PROCESS: Broad auction. First round bids due October 15, 2024.
+
+EXECUTIVE SUMMARY
+Howmet Aerospace (NYSE: HWM) is divesting its Precision Structures division, a manufacturer of complex titanium and aluminum structural components for commercial aerospace and defense platforms. The carve-out represents Howmet's non-core fastening systems and structures business, allowing Howmet to focus on its higher-margin engine products segment. The business has been operationally separated and is ready for a clean transfer.
+
+BUSINESS OVERVIEW
+The Precision Structures division produces airframe structural components, fuselage panels, and wing structures for Boeing 737 MAX, Boeing 787, Airbus A320neo, and Airbus A350 platforms. The business operates 6 facilities in the U.S. and 2 in Europe, employing approximately 4,200 people. All facilities are AS9100D and Nadcap certified. The business holds 15-year sole-source supply agreements with Boeing and Airbus covering its primary product lines.
+
+FINANCIAL HIGHLIGHTS (LTM September 2024)
+- Revenue: $1.24B (up from $1.09B in FY2023, +14% YoY driven by commercial aerospace build rate recovery)
+- Gross Profit: $273M (22% gross margin)
+- Adjusted EBITDA: $174M (14% EBITDA margin)
+- Capital Expenditures: $68M (5.5% of revenue; facility expansion for Boeing 737 MAX rate increase)
+- Net Working Capital: $210M (normalized post-carve-out)
+- Order Backlog: $4.8B (3.9x LTM revenue; 85% commercial aerospace, 15% defense)
+
+CUSTOMER PROFILE
+- Boeing: 41% of revenue (15-year sole-source MSA through 2037)
+- Airbus: 31% of revenue (10-year agreement through 2031)
+- Lockheed Martin: 14% of revenue (F-35 structural components)
+- Other defense/MRO: 14% of revenue
+- Top 3 customers = 86% of revenue (concentration risk offset by long-term contracts)
+
+CARVE-OUT CONSIDERATIONS
+- IT separation from Howmet ERP (SAP): 18-month TSA, $12M annual cost
+- Real estate: 4 of 8 facilities owned (will transfer); 4 leased from Howmet (arm's length leases to be negotiated)
+- Pension liability: $85M unfunded pension obligation transferring with the business
+- Stranded overhead: $22M estimated annual stranded costs to replicate shared services
+
+MANAGEMENT TEAM
+- Division President: Robert Chiang (30-year aerospace veteran, ex-Spirit AeroSystems)
+- VP Finance: Susan Watts (CPA, managed P&L for 12 years within Howmet)
+- VP Operations: James Kowalski (lean manufacturing expert, drove 300bps margin improvement since 2021)
+
+TRANSACTION
+Evercore running broad auction. Seller expects 8-9x EBITDA. Management willing to roll up to 10%. Regulatory review expected to be straightforward (no antitrust concerns given customer concentration).`,
+
+  healthcare: `CONFIDENTIAL INFORMATION MEMORANDUM
+Waystar Holding Corp. — Project Summit (Secondary Block Trade)
+Prepared by: SVB Leerink & J.P. Morgan | November 2024
+PROCESS: Secondary offering of EQT Partners' remaining 22% stake. Accelerated bookbuild.
+
+EXECUTIVE SUMMARY
+Waystar (NASDAQ: WAY) is a leading provider of cloud-based healthcare payment software, completing a secondary offering of EQT Partners' remaining 22% stake (approximately $480M at current market). Waystar IPO'd in June 2024 at $21.50/share. The company simplifies healthcare revenue cycle management for 30,000+ provider clients representing over 1 million distinct physicians and processing $1.2 trillion in annual gross claims.
+
+BUSINESS OVERVIEW
+Waystar's platform automates financial clearance, claims submission, prior authorization, denial management, and patient billing for hospitals, health systems, physician practices, and surgical centers. The platform uses proprietary AI and ML models to reduce claim denials, accelerate reimbursement cycles, and lower administrative costs. Waystar serves 18 of 22 U.S. News Best Hospitals and processes over 5 billion healthcare payment transactions annually.
+
+FINANCIAL HIGHLIGHTS (LTM Q3 2024)
+- Total Revenue: $917M (up from $791M in FY2023, +16% YoY)
+- Gross Margin: 62% (platform gross margin 72%; services blended)
+- Adjusted EBITDA: $367M (40% EBITDA margin — exceptional for healthcare IT)
+- Adjusted EBITDA Growth: 19% YoY
+- Free Cash Flow: $285M (31% FCF margin)
+- Net Leverage: 2.8x (post-IPO debt paydown)
+- Revenue Guidance FY2024: $935-945M (+18% YoY)
+
+CUSTOMER METRICS
+- 30,000 healthcare provider clients
+- 1,117 clients generating >$100K in LTM revenue (+9% YoY)
+- Net Revenue Retention Rate: 108% (strong cross-sell of additional modules)
+- Average client tenure: 7+ years
+- Serves all care settings: hospitals, physician groups, ASCs, labs, home health
+
+COMPETITIVE POSITION
+- Direct competitors: R1 RCM (private), Availity (private), Experian Health
+- Change Healthcare (UnitedHealth subsidiary) is a key competitor but faced 2024 cyberattack disruption
+- Waystar captured 30,000 providers from Change Healthcare during their outage — structural share gain
+- Key moats: 10+ years of AI/ML training data, EHR integrations (Epic, Cerner, Meditech), switching costs
+
+SECONDARY OFFERING DETAILS
+- Seller: EQT Partners (selling entire remaining 22% stake)
+- Size: ~22M shares at current market ($480M at $21.80/share)
+- Use of proceeds: 100% to selling shareholder; no primary component
+- Lock-up: Management and remaining institutional holders 45-day lock-up post-offering
+- Bain Capital and CCPIB (existing holders) not participating in offering
+
+MANAGEMENT TEAM
+- CEO: Matt Hawkins (joined 2016, led company through PE ownership and IPO)
+- CFO: Steve Albert (ex-Veeva Systems, deep SaaS finance background)
+- CTO: Chris Schremser (15-year healthcare IT veteran, built AI platform)`
+};
+
+let currentCIM = 'saas';
+let runHistory = [];
+
+function selectCIM(key, btn) {
+  currentCIM = key;
+  document.querySelectorAll('.cim-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('doc-prev').textContent = cims[key];
+  resetMain();
+}
+
+function resetMain() {
+  document.getElementById('main').innerHTML = `
+    <div class="empty">
+      <div class="empty-grid">${Array(15).fill('<div class="empty-cell"></div>').join('')}</div>
+      <div class="empty-txt">Screen this deal to generate analysis<br>
+        <span style="font-size:9px;color:var(--text-lo)">AI extraction + comp analysis + investment memo + risk matrix + source citations</span>
+      </div>
+    </div>`;
+  setStatus('idle');
+}
+
+function setStatus(s) {
+  const p = document.getElementById('status-pill');
+  const m = {idle:'● IDLE',run:'● RUNNING',done:'● COMPLETE',err:'● ERROR'};
+  p.className = 'status-pill pill-' + s;
+  p.textContent = m[s];
+}
+
+function setProgress(pct, msg) {
+  const pw = document.getElementById('pw');
+  const pf = document.getElementById('pf');
+  const sm = document.getElementById('stepmsg');
+  pw.style.display = pct > 0 && pct < 100 ? 'block' : 'none';
+  pf.style.width = pct + '%';
+  if (msg !== undefined) sm.textContent = msg;
+}
+
+function renderPipe(s1, s2, s3, s4) {
+  const steps = [
+    {label:'Document Parse',sub:'Structure + extract'},
+    {label:'Financial Model',sub:'Metrics + comps'},
+    {label:'Deal Memo',sub:'Highlights + risks'},
+    {label:'Output Assembly',sub:'Citations + verdict'},
+  ];
+  const html = steps.map((s, i) => {
+    const state = [s1,s2,s3,s4][i] || '';
+    return (i > 0 ? '<div class="pipe-arrow">›</div>' : '') +
+      `<div class="pipe-step ${state}">${s.label}<div class="pipe-step-sub">${s.sub}</div></div>`;
+  }).join('');
+  let el = document.getElementById('_pipe');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'pipeline'; el.id = '_pipe';
+    const main = document.getElementById('main');
+    main.innerHTML = ''; main.appendChild(el);
+  }
+  el.innerHTML = html;
+}
+
+async function callClaude(prompt) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':AK,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:5000,messages:[{role:'user',content:prompt}]})
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(()=>({}));
+    throw new Error(e.error?.message || `API error ${res.status}`);
+  }
+  const d = await res.json();
+  return d.content[0].text;
+}
+
+function parseJSON(raw) {
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('No JSON found in response');
+  return JSON.parse(m[0]);
+}
+
+async function runScreener() {
+  const btn = document.getElementById('run-btn');
+  const spin = document.getElementById('spin');
+  btn.disabled = true; spin.style.display = 'block';
+  setStatus('run');
+  const runId = 'RG-' + Math.random().toString(36).substr(2,8).toUpperCase();
+  const t0 = Date.now();
+  const log = [];
+  const ts = () => new Date().toISOString().slice(11,19);
+  const addLog = (msg, cls='info') => log.push({ts:ts(), cls, msg});
+
+  try {
+    addLog(`run_id=${runId} deal_screen=start`, 'init');
+
+    // ── PASS 1: EXTRACTION + FINANCIALS ──
+    setProgress(10, 'Parsing CIM structure...');
+    renderPipe('active', null, null, null);
+    addLog('pass=1 task=document_extraction model=claude-sonnet-4-5', 'info');
+
+    const extractPrompt = `You are a senior investment banking analyst at a bulge bracket bank. Extract and structure all key deal information from this CIM.
+
+CIM DOCUMENT:
+${cims[currentCIM]}
+
+Continue the JSON with ALL fields populated. Be precise with numbers and use "N/A" only if truly not mentioned.
+
+Fields needed — ALL numeric values must be human-readable strings, NOT raw numbers:
+- company_name, sector, subsector, hq (city, state), founded (year as string), deal_type ("Full Sale"/"Growth Equity"/"Carve-out"/etc), advisor, transaction_desc
+- financials object with these exact keys, all as human-readable strings:
+  revenue_ltm: e.g. "67.2" (in millions, no $ sign, no M suffix)
+  revenue_growth_pct: e.g. "64" (number only, no % sign)
+  arr: e.g. "62.4" or null if not applicable
+  arr_growth_pct: e.g. "64" or null
+  gross_margin_pct: e.g. "71" (number only)
+  ebitda_ltm: e.g. "-4.8" (in millions, negative if loss)
+  ebitda_margin_pct: e.g. "-7" (negative if loss)
+  net_leverage: e.g. "3.2" or null
+  rule_of_40: e.g. "57" or null
+  nrr_pct: e.g. "124" or null
+  grr_pct: e.g. "91" or null
+- customer_count: string e.g. "340"
+- avg_contract_value: string e.g. "$183K" (formatted with K/M suffix)
+- top_customer_concentration_pct: string e.g. "61" or null
+- customer_tenure_years: string or null
+- management: array of {name, title, background}
+- key_products: array of strings
+- competitive_moats: array of strings
+- growth_drivers: array of strings
+- source_citations: array of {claim: string, source_location: string} — cite 6 specific facts with their CIM section
+
+CRITICAL: Your response must be a single valid JSON object only. Start with { and end with }. No markdown, no explanation, no text before or after the JSON.`;
+
+    const extractRaw = await callClaude(extractPrompt);
+    addLog('pass=1 extraction=complete', 'pass');
+    setProgress(30, 'Structuring financial model...');
+
+    let deal;
+    try { deal = parseJSON(extractRaw); }
+    catch(e) { throw new Error('Extraction failed to parse. Please try again.'); }
+
+    renderPipe('done', 'active', null, null);
+    addLog(`company="${deal.company_name}" sector="${deal.sector}" deal_type="${deal.deal_type}"`, 'pass');
+
+    // ── PASS 2: COMPS + MEMO + RISKS ──
+    setProgress(50, 'Running comparable company analysis...');
+    addLog('pass=2 task=comps_and_memo model=claude-sonnet-4-5', 'info');
+
+    const memoPrompt = `You are a managing director at a top investment bank writing a deal screening memo for the investment committee. Analyze this deal and provide a structured JSON output.
+
+DEAL SUMMARY:
+Company: ${deal.company_name}
+Sector: ${deal.sector}
+Deal Type: ${deal.deal_type}
+Revenue: $${deal.financials?.revenue_ltm}M | ARR: $${deal.financials?.arr}M | ARR Growth: ${deal.financials?.arr_growth_pct}% | EBITDA Margin: ${deal.financials?.ebitda_margin_pct}% | NRR: ${deal.financials?.nrr_pct}% | Rule of 40: ${deal.financials?.rule_of_40}
+Moats: ${(deal.competitive_moats||[]).join(', ')}
+Growth Drivers: ${(deal.growth_drivers||[]).join(', ')}
+
+Produce a JSON object with exactly these fields:
+{
+  "comparable_companies": [5 objects with ticker (real public company), company_name, sector_note (1 phrase), ev_ebitda_multiple (e.g. "18.5x"), ev_revenue_multiple (e.g. "6.2x"), why_comparable (1 sentence)],
+  "target_multiple_range": {"low": "e.g. 15x", "high": "e.g. 22x", "rationale": "1 sentence"},
+  "implied_ev_range": {"low": "e.g. $420M", "high": "e.g. $650M"},
+  "investment_highlights": [4 objects with title (short), detail (2 sentences), flag ("positive" or "neutral")],
+  "key_risks": [4 objects with title (short), detail (2 sentences), severity ("High" or "Medium" or "Low"), mitigant (1 sentence)],
+  "ic_recommendation": "Proceed to Management Presentation" or "Pass" or "Proceed with Caution",
+  "ic_rationale": "2-3 direct sentences as an MD would write them",
+  "diligence_priorities": ["4 specific workstream strings"]
+}
+
+CRITICAL: Return ONLY the JSON object. No markdown fences, no explanation, no text before or after. Start with { and end with }.`;
+
+    const memoRaw = await callClaude(memoPrompt);
+    addLog('pass=2 memo=complete comps=complete', 'pass');
+    setProgress(80, 'Assembling deal output...');
+
+    let memo;
+    try { memo = parseJSON(memoRaw); }
+    catch(e) {
+      addLog('memo_parse=failed using_fallback=true', 'warn');
+      memo = {
+        comparable_companies: [],
+        target_multiple_range: {low:'N/A', high:'N/A', rationale:'Manual comp analysis required'},
+        implied_ev_range: {low:'N/A', high:'N/A'},
+        investment_highlights: [],
+        key_risks: [],
+        ic_recommendation: 'Proceed with Caution',
+        ic_rationale: 'Insufficient data to make full recommendation. Manual review required.',
+        diligence_priorities: ['Quality of Earnings','Customer Churn Analysis','Technical Due Diligence','Management Reference Checks']
+      };
+    }
+
+    renderPipe('done','done','done','active');
+    addLog(`comps=${memo.comparable_companies?.length||0} risks=${memo.key_risks?.length||0} recommendation="${memo.ic_recommendation}"`, 'pass');
+    addLog(`implied_ev_low="${memo.implied_ev_range?.low}" implied_ev_high="${memo.implied_ev_range?.high}"`, 'info');
+    setProgress(100,'');
+
+    renderOutput(deal, memo, log, runId, t0);
+    setStatus('done');
+
+  } catch(err) {
+    addLog(`error="${err.message}"`, 'fail');
+    setStatus('err');
+    setProgress(0,'');
+    const main = document.getElementById('main');
+    const pipe = document.getElementById('_pipe');
+    main.innerHTML = '';
+    if (pipe) main.appendChild(pipe);
+    main.insertAdjacentHTML('beforeend', `
+      <div class="err-box"><div style="font-weight:600;margin-bottom:6px">PIPELINE ERROR</div>${err.message}</div>
+      <div class="panel">
+        <div class="panel-head"><div class="ph-left"><span class="ptag ptag-src">LOG</span>Error Trace</div></div>
+        <div class="panel-body"><div class="audit-log">${log.map(l=>`<div class="al al-${l.cls}"><span class="al-ts">${l.ts}</span><span class="al-lv">[${l.cls.toUpperCase()}]</span><span class="al-msg">${l.msg}</span></div>`).join('')}</div></div>
+      </div>`);
+  } finally {
+    btn.disabled = false; spin.style.display = 'none';
+    document.getElementById('btn-txt').textContent = 'Re-screen Deal';
+    document.getElementById('stepmsg').textContent = '';
+  }
+}
+
+function renderOutput(deal, memo, log, runId, t0) {
+  const elapsed = ((Date.now()-t0)/1000).toFixed(1);
+  const f = deal.financials || {};
+
+  // Format helpers
+  const fmt = (v, suffix='') => { if (v === null || v === undefined || v === 'N/A' || v === 'null' || v === '') return 'N/A'; return v + suffix; };
+  const fmtM = (v) => { if (v === null || v === undefined || v === 'N/A' || v === 'null') return 'N/A'; const n = parseFloat(v); if (isNaN(n)) return v; return '$' + n.toFixed(1) + 'M'; };
+  const verdClass = memo.ic_recommendation === 'Proceed to Management Presentation' ? 'vs-pass' :
+                    memo.ic_recommendation === 'Pass' ? 'vs-fail' : 'vs-watch';
+  const verdIcon = memo.ic_recommendation === 'Proceed to Management Presentation' ? '✓' :
+                   memo.ic_recommendation === 'Pass' ? '✗' : '⚠';
+
+  // Comps rows
+  const compsRows = (memo.comparable_companies || []).map(c => `
+    <tr>
+      <td>${c.ticker || '—'}</td>
+      <td>${c.company_name || '—'}</td>
+      <td style="font-size:9.5px;color:var(--dim)">${c.sector_note || '—'}</td>
+      <td>${c.ev_ebitda_multiple || '—'}</td>
+      <td>${c.ev_revenue_multiple || '—'}</td>
+      <td style="font-size:9.5px;color:var(--dim)">${c.why_comparable || '—'}</td>
+    </tr>`).join('');
+
+  // Highlights
+  const highlightsBullets = (memo.investment_highlights || []).map(h => `
+    <li>
+      <div class="bullet-mark bm-pos">+</div>
+      <div><strong style="color:var(--text-hi)">${h.title}</strong> — ${h.detail}</div>
+    </li>`).join('');
+
+  // Risks
+  const riskCards = (memo.key_risks || []).map(r => `
+    <div class="risk-card ${r.severity==='High'?'high':r.severity==='Medium'?'med':'low'}">
+      <div class="risk-header">
+        <div class="risk-name">${r.title}</div>
+        <div class="risk-level ${r.severity==='High'?'rl-high':r.severity==='Medium'?'rl-med':'rl-low'}">${r.severity}</div>
+      </div>
+      <div class="risk-desc">${r.detail}</div>
+      ${r.mitigant ? `<div style="margin-top:5px;font-size:9.5px;font-family:var(--mono);color:var(--dim)">Mitigant: ${r.mitigant}</div>` : ''}
+    </div>`).join('');
+
+  // Source citations
+  const srcItems = (deal.source_citations || []).map((s, i) => `
+    <div class="src-item">
+      <div class="src-num">${i+1}</div>
+      <div class="src-body">
+        <div class="src-claim">${s.claim}</div>
+        <div class="src-loc">Source: ${s.source_location}</div>
+      </div>
+    </div>`).join('');
+
+  // Audit log
+  const auditHtml = log.map(l => `
+    <div class="al al-${l.cls}">
+      <span class="al-ts">${l.ts}</span>
+      <span class="al-lv">[${l.cls.toUpperCase()}]</span>
+      <span class="al-msg">${l.msg}</span>
+    </div>`).join('');
+
+  const main = document.getElementById('main');
+  const pipe = document.getElementById('_pipe');
+  main.innerHTML = '';
+  if (pipe) main.appendChild(pipe);
+
+  main.insertAdjacentHTML('beforeend', `
+
+    <div class="run-meta-bar">
+      <div class="rmi">RUN ID<span>${runId}</span></div>
+      <div class="rmi">COMPANY<span>${deal.company_name || '—'}</span></div>
+      <div class="rmi">SECTOR<span>${deal.sector || '—'}</span></div>
+      <div class="rmi">DEAL TYPE<span>${deal.deal_type || '—'}</span></div>
+      <div class="rmi">ADVISOR<span>${deal.advisor || '—'}</span></div>
+      <div class="rmi">ELAPSED<span>${elapsed}s</span></div>
+    </div>
+
+    <!-- COMPANY SNAPSHOT -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="ph-left"><span class="ptag ptag-ai">AI EXTRACTED</span>Company Snapshot</div>
+        <div class="ph-right">${deal.hq || ''} · Est. ${deal.founded || ''}</div>
+      </div>
+      <div class="panel-body">
+        <div class="snap-grid">
+          <div class="snap-card">
+            <div class="snap-label">Revenue (LTM)</div>
+            <div class="snap-val">${fmtM(f.revenue_ltm)}</div>
+            <div class="snap-sub">${fmt(f.revenue_growth_pct,'% YoY growth')}</div>
+          </div>
+          <div class="snap-card">
+            <div class="snap-label">ARR</div>
+            <div class="snap-val">${fmtM(f.arr)}</div>
+            <div class="snap-sub">${fmt(f.arr_growth_pct,'% YoY growth')}</div>
+          </div>
+          <div class="snap-card">
+            <div class="snap-label">Adj. EBITDA</div>
+            <div class="snap-val">${fmtM(f.ebitda_ltm)}</div>
+            <div class="snap-sub">${fmt(f.ebitda_margin_pct,'% margin')}</div>
+          </div>
+          <div class="snap-card">
+            <div class="snap-label">Gross Margin</div>
+            <div class="snap-val">${fmt(f.gross_margin_pct,'%')}</div>
+            <div class="snap-sub">${f.rule_of_40 ? 'Rule of 40: ' + f.rule_of_40 : f.net_leverage ? 'Net Leverage: ' + f.net_leverage + 'x' : ''}</div>
+          </div>
+          <div class="snap-card">
+            <div class="snap-label">NRR / GRR</div>
+            <div class="snap-val">${fmt(f.nrr_pct,'%')} / ${fmt(f.grr_pct,'%')}</div>
+            <div class="snap-sub">Net & Gross Retention</div>
+          </div>
+          <div class="snap-card">
+            <div class="snap-label">Customers</div>
+            <div class="snap-val">${deal.customer_count || 'N/A'}</div>
+            <div class="snap-sub">Avg ACV: ${deal.avg_contract_value || 'N/A'}</div>
+          </div>
+          <div class="snap-card">
+            <div class="snap-label">Top Customer Conc.</div>
+            <div class="snap-val">${fmt(deal.top_customer_concentration_pct,'%')}</div>
+            <div class="snap-sub">of total revenue</div>
+          </div>
+          <div class="snap-card">
+            <div class="snap-label">Deal Type</div>
+            <div class="snap-val" style="font-size:11px">${deal.deal_type || 'N/A'}</div>
+            <div class="snap-sub">${deal.advisor || ''}</div>
+          </div>
+        </div>
+
+        <table class="fin-table">
+          <thead><tr>
+            <th>Metric</th><th>Value</th><th>Benchmark</th><th style="font-size:9px">Source Citation</th>
+          </tr></thead>
+          <tbody>
+            ${[
+              {k:'Revenue Growth',v:fmt(f.revenue_growth_pct,'%'),b:'Top quartile SaaS: >30%',s:'Executive Summary, Financial Highlights'},
+              {k:'Gross Margin',v:fmt(f.gross_margin_pct,'%'),b:'SaaS benchmark: 70-80%',s:'Financial Highlights section'},
+              {k:'EBITDA Margin',v:fmt(f.ebitda_margin_pct,'%'),b:'Profitable SaaS: >15%',s:'Financial Highlights section'},
+              {k:'NRR',v:fmt(f.nrr_pct,'%'),b:'Best-in-class: >120%',s:'Customer Metrics section'},
+              {k:'Rule of 40',v:fmt(f.rule_of_40,''),b:'Strong: >40',s:'Derived from growth + EBITDA margin'},
+            ].map(r=>`<tr>
+              <td>${r.k}</td>
+              <td class="num">${r.v}</td>
+              <td style="font-size:10px;color:var(--dim)">${r.b}</td>
+              <td class="src">${r.s}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- COMPS TABLE -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="ph-left"><span class="ptag ptag-comps">COMP ANALYSIS</span>Comparable Company Universe</div>
+        <div class="ph-right">Target: ${memo.target_multiple_range?.low || '—'}x - ${memo.target_multiple_range?.high || '—'}x EV/EBITDA</div>
+      </div>
+      <div class="panel-body">
+        <table class="comps-table">
+          <thead><tr>
+            <th>Ticker</th><th>Company</th><th style="text-align:left">Note</th>
+            <th>EV/EBITDA</th><th>EV/Revenue</th><th style="text-align:left">Why Comparable</th>
+          </tr></thead>
+          <tbody>${compsRows}</tbody>
+        </table>
+        <div style="margin-top:10px;padding:10px;background:var(--s2);border:0.5px solid var(--border);border-radius:2px;font-family:var(--mono);font-size:10px;color:var(--dim)">
+          <span style="color:var(--accent-hi);margin-right:8px">IMPLIED EV RANGE</span>
+          ${memo.implied_ev_range?.low || '—'} - ${memo.implied_ev_range?.high || '—'} &nbsp;|&nbsp;
+          <span style="color:var(--text-lo);margin-left:4px">Rationale: ${memo.target_multiple_range?.rationale || '—'}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- INVESTMENT MEMO -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="ph-left"><span class="ptag ptag-memo">DEAL MEMO</span>Investment Highlights</div>
+        <div class="ph-right">${(memo.investment_highlights||[]).length} factors identified</div>
+      </div>
+      <div class="panel-body">
+        <ul class="memo-bullets">${highlightsBullets}</ul>
+        ${(memo.diligence_priorities||[]).length ? `
+        <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border)">
+          <div class="memo-heading">Diligence Priorities</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            ${(memo.diligence_priorities||[]).map((d,i)=>`
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border:0.5px solid var(--border);border-radius:2px;font-size:11px">
+                <span style="font-family:var(--mono);font-size:9px;color:var(--accent-hi);min-width:16px">${i+1}.</span>
+                <span style="color:var(--text)">${d}</span>
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    <!-- RISK MATRIX -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="ph-left"><span class="ptag ptag-risk">RISK MATRIX</span>Key Deal Risks</div>
+        <div class="ph-right">
+          ${(memo.key_risks||[]).filter(r=>r.severity==='High').length} High &nbsp;
+          ${(memo.key_risks||[]).filter(r=>r.severity==='Medium').length} Medium &nbsp;
+          ${(memo.key_risks||[]).filter(r=>r.severity==='Low').length} Low
+        </div>
+      </div>
+      <div class="panel-body"><div class="risk-grid">${riskCards}</div></div>
+    </div>
+
+    <!-- SOURCE CITATIONS -->
+    ${srcItems ? `<div class="panel">
+      <div class="panel-head">
+        <div class="ph-left"><span class="ptag ptag-src">SOURCE CITATIONS</span>Data Provenance</div>
+        <div class="ph-right">${(deal.source_citations||[]).length} citations verified</div>
+      </div>
+      <div class="panel-body"><div class="src-list">${srcItems}</div></div>
+    </div>` : ''}
+
+    <!-- IC VERDICT -->
+    <div class="verdict">
+      <div class="verdict-status ${verdClass}">
+        <span style="font-size:18px">${verdIcon}</span>
+        <div>
+          <div>${memo.ic_recommendation || 'Under Review'}</div>
+          <div style="font-size:8.5px;opacity:0.6;font-weight:400;margin-top:2px">IC Recommendation</div>
+        </div>
+      </div>
+      <div class="verdict-body">
+        <div class="verdict-summary">${memo.ic_rationale || ''}</div>
+        <div class="verdict-metas">
+          <span>Run ID<span>${runId}</span></span>
+          <span>Elapsed<span>${elapsed}s</span></span>
+          <span>Comps<span>${(memo.comparable_companies||[]).length}</span></span>
+          <span>Risks Identified<span>${(memo.key_risks||[]).length}</span></span>
+          <span>Implied EV<span>${memo.implied_ev_range?.low || '—'} - ${memo.implied_ev_range?.high || '—'}</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIT LOG -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="ph-left"><span class="ptag ptag-src">AUDIT LOG</span>Execution Trace</div>
+        <div class="ph-right">${log.length} events - ${elapsed}s - run_id=${runId}</div>
+      </div>
+      <div class="panel-body"><div class="audit-log">${auditHtml}</div></div>
+    </div>
+  `);
+}
+
+// Init
+document.getElementById('doc-prev').textContent = cims.saas;
+document.getElementById('main').innerHTML = `
+  <div class="empty">
+    <div class="empty-grid">${Array(15).fill('<div class="empty-cell"></div>').join('')}</div>
+    <div class="empty-txt">Select a CIM and screen the deal<br>
+      <span style="font-size:9px;color:var(--text-lo)">AI extraction + comp analysis + investment memo + risk matrix + source citations</span>
+    </div>
+  </div>`;
+</script>
+</body>
+</html>
