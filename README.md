@@ -43,9 +43,3 @@ I tried to build something with the same instinct. Every data point in the outpu
 The role asks for someone who can build prototypes with AI tools, run demos with clients, and translate financial workflows into product requirements. This is my version of showing up to that conversation with proof of work rather than a cover letter.
 
 ---
-
-## Technical notes
-
-Single HTML file, no dependencies, no build step. Two sequential Claude API calls — extraction pass, then memo pass. The JSON parsing uses a regex fallback so the UI degrades gracefully if either call returns something unexpected.
-
-Total cost per run is roughly $0.04. Open the file in Chrome and it works immediately.
